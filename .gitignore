@@ -1,0 +1,7 @@
+__pycache__/
+.vscode/
+logs/
+images/
+WHDY_vanilla_malicious_involved_fedavg/logs/
+.DS_Store
+*/.DS_Store
