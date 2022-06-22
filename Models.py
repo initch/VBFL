@@ -9,7 +9,7 @@ import numpy as np
 import datetime
 
 
-class SimpleNet(nn.Module):
+'''class SimpleNet(nn.Module):
     def __init__(self, name=None, created_time=None):
         super(SimpleNet, self).__init__()
         self.created_time = created_time
@@ -217,7 +217,7 @@ class SimpleNet(nn.Module):
                 # own_state[name].copy_(param)
                 own_state[name].copy_(param.clone())
 
-
+'''
 
 class Mnist_2NN(nn.Module):
 	def __init__(self):
@@ -233,9 +233,9 @@ class Mnist_2NN(nn.Module):
 		return tensor
 
 
-class Mnist_CNN(SimpleNet):
+class Mnist_CNN(nn.Module):
 	def __init__(self):
-		super(Mnist_CNN, self).__init__()
+		super().__init__()
 		self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=5, stride=1, padding=2)
 		self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
 		self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5, stride=1, padding=2)

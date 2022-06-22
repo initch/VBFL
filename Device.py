@@ -706,7 +706,7 @@ class Device:
 				self.variance_of_noises.append(float(variance_of_noise))
 
 	# TODO change to computation power
-	def worker_local_update(self, rewards, log_files_folder_path_comm_round, comm_round, local_epochs=1):
+	def worker_local_update(self, rewards, log_files_folder_path_comm_round, saved_models_folder_path, comm_round, local_epochs=1):
 		print(f"Worker {self.idx} is doing local_update with computation power {self.computation_power} and link speed {round(self.link_speed,3)} bytes/s")
 		self.net.load_state_dict(self.global_parameters, strict=True)
 		self.local_update_time = time.time()
@@ -775,12 +775,11 @@ class Device:
 			self.local_update_time = float('inf')
 		
 		# record accuracies to find good -vh
-		with open(f"{log_files_folder_path_comm_round}/worker_final_local_accuracies_comm_{comm_round}.txt", "a") as file:
+		'''with open(f"{log_files_folder_path_comm_round}/worker_final_local_accuracies_comm_{comm_round}.txt", "a") as file:
 			file.write(
-				f"{self.return_idx()} {self.return_role()} {is_malicious_node}: {self.validate_model_weights(self.net.state_dict())}\n")
-			if self.is_malicious and comm_round >= config.start_poison_round:
-				index =  helper.get_adversarial_index(int(self.idx.split("_")[-1]) - 1)
-				file.write(f"--shot {self.shot} time(s), asr(local {index}): {self.test_local_trigger(self.test_ds, index, self.net.state_dict())}\n")
+				f"{self.return_idx()} {self.return_role()} {is_malicious_node}: {self.validate_model_weights(self.net.state_dict())}\n")'''
+		if self.is_malicious and comm_round >= config.start_save_round:
+			torch.save(self.net, f"{saved_models_folder_path}/{self.idx}_comm_{comm_round}.pkl")
 		print(f"Done {local_epochs} epoch(s) and total {self.local_total_epoch} epochs")
 		self.local_train_parameters = self.net.state_dict()
 		return self.local_update_time

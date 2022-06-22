@@ -2,6 +2,7 @@ __pycache__/
 .vscode/
 logs/
 images/
+saved_models/
 WHDY_vanilla_malicious_involved_fedavg/logs/
 .DS_Store
 */.DS_Store

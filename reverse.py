@@ -21,12 +21,13 @@ def train(model, target_label, train_loader, param):
 
 	Epochs = param["Epochs"]
 	lamda = param["lamda"]
+	lr = param['lr']
 
 	min_norm = np.inf
 	min_norm_count = 0
 
 	criterion = CrossEntropyLoss()
-	optimizer = torch.optim.Adam([{"params": trigger},{"params": mask}],lr=0.005)
+	optimizer = torch.optim.Adam([{"params": trigger},{"params": mask}],lr=lr)
 	model.to(device)
 	model.eval()
 
@@ -68,7 +69,8 @@ def train(model, target_label, train_loader, param):
 def reverse_engineer(model, weights_to_eval, train_loader):
 	param = {
 		"dataset": "mnist",
-		"Epochs": 5,
+		"lr": 0.005,
+		"Epochs": 10,
 		"batch_size": 64,
 		"lamda": 0.01,
 		"num_classes": 10,
@@ -76,14 +78,12 @@ def reverse_engineer(model, weights_to_eval, train_loader):
 	}
 
 	# test
-	'''model = torch.load("model_device_1_comm_3.pkl")
+	# mnist_dataset = DatasetLoad('mnist', 1)
+	# data = torch.tensor(mnist_dataset.train_data[:10000])
+	# label = torch.argmax(torch.tensor(mnist_dataset.train_label[:10000]), dim=1)
+	# train_data = TensorDataset(data, label)
 
-	mnist_dataset = DatasetLoad('mnist', 1)
-	test_data = torch.tensor(mnist_dataset.test_data)
-	test_label = torch.argmax(torch.tensor(mnist_dataset.test_label), dim=1)
-	test_data = TensorDataset(test_data, test_label)
-
-	train_loader = DataLoader(test_data, batch_size=param["batch_size"], shuffle=False)'''
+	# train_loader = DataLoader(train_data, batch_size=param["batch_size"], shuffle=True)
 
 	model.load_state_dict(weights_to_eval, strict=True)
 	norm_list = []
@@ -97,21 +97,24 @@ def reverse_engineer(model, weights_to_eval, train_loader):
 		masks.append(mask)
 		triggers.append(trigger)
 
-	return masks
+	return masks, triggers
 
-def plot_masks(masks, name):
+def plot_triggers(masks, triggers, norm_list, name):
 	plt.clf()
-	fig, axs = plt.subplots(2, 5)
+	fig, axs = plt.subplots(2, 5, figsize=(12,6))
 	for cnt in range(10):
 		row = int(cnt/ 5)
 		col = cnt % 5
 		axs[row, col].set_xticks([])
 		axs[row, col].set_yticks([])
-		axs[row, col].set_title(f"{cnt}")
-		axs[row, col].imshow(masks[cnt], cmap='binary')
+		axs[row, col].set_title(f"{cnt}",fontsize=20)
+		axs[row, col].set_xlabel("L1 norm = %4f" % norm_list[cnt], fontsize=12)
+		axs[row, col].imshow(masks[cnt]*triggers[cnt], cmap='binary')
 		
 	plt.tight_layout()
-	plt.savefig(f'images/{name}.png')
+	plt.savefig(f'{name}.png', dpi=300)
+
+
 
 
 def outlier_detection(l1_norm_list):
@@ -141,7 +144,7 @@ def outlier_detection(l1_norm_list):
 	return flag_list
 
 
-def analyze_pattern_norm_dist(masks):
+def analyze_pattern_norm_dist(masks, triggers, save=False, name=None):
 
 	mask_flatten = []
 
@@ -151,12 +154,58 @@ def analyze_pattern_norm_dist(masks):
 
 	l1_norm_list = [np.sum(np.abs(m)) for m in mask_flatten]
 
+	if save:
+		plot_triggers(masks, triggers, l1_norm_list, name)
+
 	print('%d labels found' % len(l1_norm_list))
 
 	flag_list = outlier_detection(l1_norm_list)
 
+
 	return flag_list
 
+def plot_target(mask, trigger, norm, name):
+	plt.clf()
+	plt.xticks([])
+	plt.yticks([])
+	plt.xlabel("L1 norm = %4f" % norm, fontsize=20)
+	plt.imshow(mask*trigger, cmap='binary')
+
+	plt.savefig(f'{name}_label_2.png', dpi=300)
+
+def reverse_target(model, name):
+	param = {
+		"dataset": "mnist",
+		"lr": 0.005,
+		"Epochs": 10,
+		"batch_size": 64,
+		"lamda": 0.05,
+		"num_classes": 10,
+		"image_size": (28, 28)
+	}
+	mnist_dataset = DatasetLoad('mnist', 1)
+	data = torch.tensor(mnist_dataset.train_data[:10000])
+	label = torch.argmax(torch.tensor(mnist_dataset.train_label[:10000]), dim=1)
+	train_data = TensorDataset(data, label)
+	train_loader = DataLoader(train_data, batch_size=param["batch_size"], shuffle=True)
+
+	trigger, mask = train(model, 2, train_loader, param)
+	norm = mask.sum().item()
+	mask = mask.cpu().detach().numpy()
+	trigger = trigger.cpu().detach().numpy()
+	
+	plot_target(mask, trigger, norm, name)
+
+
+
 if __name__ == "__main__":
-	masks = reverse_engineer()
-	analyze_pattern_norm_dist(masks)
+
+	list = [
+		'saved_models/05102022_102315/device_device_3_comm_199.pkl'
+
+	]
+	for i in range(len(list)):
+		model = torch.load(list[i])
+		masks, triggers = reverse_engineer(model=model)
+		analyze_pattern_norm_dist(masks, triggers, save=True, name=list[i].split(".")[0])
+		

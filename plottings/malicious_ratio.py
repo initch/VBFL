@@ -8,5 +8,5 @@ dict = {
 }
 
 plot_acc_for_trails('acc_malicious_ratio', dict, 60, 1, 4, share=True)
-#plot_asr_for_trails('asr_malicious_ratio', dict, 60, 2, 2)
+plot_asr_for_trails('asr_malicious_ratio', dict, 60, 2, 2)
 plot_acc_asr_for_trails('malicious_ratio', dict, 15, 50)

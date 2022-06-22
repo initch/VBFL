@@ -44,12 +44,13 @@ import visdom
 # set program execution time for logging purpose
 date_time = datetime.now().strftime("%m%d%Y_%H%M%S")
 log_files_folder_path = f"logs/{date_time}"
+saved_models_folder_path = f"saved_models/{date_time}"
 NETWORK_SNAPSHOTS_BASE_FOLDER = "snapshots"
 # for running on Google Colab
 # log_files_folder_path = f"/content/drive/MyDrive/BFA/logs/{date_time}"
 # NETWORK_SNAPSHOTS_BASE_FOLDER = "/content/drive/MyDrive/BFA/snapshots"
 
-vis = visdom.Visdom(port=8098)
+#vis = visdom.Visdom(port=8098)
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description="Block_FedAvg_Simulation")
 
 # debug attributes
@@ -67,7 +68,7 @@ parser.add_argument('-mn', '--model_name', type=str, default='mnist_cnn', help='
 #parser.add_argument('-lr', "--learning_rate", type=float, default=0.01, help="learning rate, use value from origin paper as default")
 parser.add_argument('-op', '--optimizer', type=str, default="Adam", help='optimizer to be used, by default implementing stochastic gradient descent')
 parser.add_argument('-iid', '--IID', type=int, default=1, help='the way to allocate data to devices')
-parser.add_argument('-max_ncomm', '--max_num_comm', type=int, default=81, help='maximum number of communication rounds, may terminate early if converges')
+parser.add_argument('-max_ncomm', '--max_num_comm', type=int, default=200, help='maximum number of communication rounds, may terminate early if converges')
 #parser.add_argument('-nd', '--num_devices', type=int, default=12, help='numer of the devices in the simulation network')
 parser.add_argument('-st', '--shard_test_data', type=int, default=0, help='it is easy to see the global models are consistent across devices when the test dataset is NOT sharded')
 #parser.add_argument('-nm', '--num_malicious', type=int, default=4, help="number of malicious nodes in the network. malicious node's data sets will be introduced Gaussian noise")
@@ -165,6 +166,7 @@ if __name__=="__main__":
 		
 		# 0. create log_files_folder_path if not resume
 		os.mkdir(log_files_folder_path)
+		os.mkdir(saved_models_folder_path)
 
 		# 1. save arguments used
 		with open(f'{log_files_folder_path}/args_used.txt', 'w') as f:
@@ -467,7 +469,7 @@ if __name__=="__main__":
 						while total_time_tracker < validator.return_miner_acception_wait_time():
 							# simulate the situation that worker may go offline during model updates transmission to the validator, based on per transaction
 							if worker.online_switcher():
-								local_update_spent_time = worker.worker_local_update(rewards, log_files_folder_path_comm_round, comm_round)
+								local_update_spent_time = worker.worker_local_update(rewards, log_files_folder_path_comm_round,saved_models_folder_path, comm_round)
 								unverified_transaction = worker.return_local_updates_and_signature(comm_round)
 								# size in bytes, usually around 35000 bytes per transaction
 								unverified_transactions_size = getsizeof(str(unverified_transaction))
@@ -514,7 +516,7 @@ if __name__=="__main__":
 					if not worker.return_idx() in validator.return_black_list():
 						print(f'worker {worker_iter+1}/{len(associated_workers)} of validator {validator.return_idx()} is doing local updates')	 
 						if worker.online_switcher():
-							local_update_spent_time = worker.worker_local_update(rewards, log_files_folder_path_comm_round, comm_round, local_epochs=worker.worker_epochs)
+							local_update_spent_time = worker.worker_local_update(rewards, log_files_folder_path_comm_round,saved_models_folder_path, comm_round, local_epochs=worker.worker_epochs)
 							worker_link_speed = worker.return_link_speed()
 							lower_link_speed = validator_link_speed if validator_link_speed < worker_link_speed else worker_link_speed
 							unverified_transaction = worker.return_local_updates_and_signature(comm_round)
@@ -850,12 +852,20 @@ if __name__=="__main__":
 		if config.global_update_method == 'all_devices':
 			device = devices_list[0]
 			accuracy_this_round = device.validate_model_weights()
+			if comm_round >= config.start_save_round:
+				torch.save(device.net, f"{saved_models_folder_path}/model_comm_{comm_round}.pkl")
 			with open(f"{log_files_folder_path_comm_round}/accuracy_comm_{comm_round}.txt", "a") as file:
 				is_malicious_node = "M" if device.return_is_malicious() else "B"
 				file.write(f"{device.return_idx()} {device.return_role()} {is_malicious_node}: {accuracy_this_round}\n")
 		else:
+			save_flag = False
 			for device in devices_list:
-				accuracy_this_round = device.validate_model_weights()
+				if device.return_role() == 'worker' and comm_round >= config.start_save_round and save_flag == False:
+					accuracy_this_round = device.validate_model_weights()
+					torch.save(device.net, f"{saved_models_folder_path}/model_comm_{comm_round}.pkl")
+					save_flag = True
+				else:
+					accuracy_this_round = device.validate_model_weights()
 				with open(f"{log_files_folder_path_comm_round}/accuracy_comm_{comm_round}.txt", "a") as file:
 					is_malicious_node = "M" if device.return_is_malicious() else "B"
 					file.write(f"{device.return_idx()} {device.return_role()} {is_malicious_node}: {accuracy_this_round}\n")

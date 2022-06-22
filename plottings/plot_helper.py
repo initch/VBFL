@@ -4,7 +4,7 @@ from os import listdir
 colors = ['lightsteelblue', 'cornflowerblue', 'lightsalmon', 'peachpuff']
 
 def plot_acc_for_single_trial(time):
-
+    fig = plt.figure(figsize=(4,3), dpi=300)
     log_folder = f"logs/{time}"
     all_rounds_log_files = sorted([f for f in listdir(log_folder) if f.startswith('comm')], key=lambda x: int(x.split('.')[0].split('_')[-1]))
     rounds = len(all_rounds_log_files) - 1
@@ -20,7 +20,9 @@ def plot_acc_for_single_trial(time):
     plt.xlabel('Communication Round')
     plt.ylabel('Accuracy')
 
-    plt.plot(range(1, rounds+1), accu)
+    plt.plot(range(1, rounds+1), accu, linewidth=3)
+
+    plt.tight_layout()
 
     plt.savefig(f"{log_folder}/1_accuracy.png", dpi=300)
     plt.show()
@@ -162,10 +164,9 @@ def plot_asr_for_all_devices(time, num_devices, t_row, t_col):
     log_folder = f"logs/{time}"
     all_rounds_log_files = sorted([f for f in listdir(log_folder) if f.startswith('comm')], key=lambda x: int(x.split('.')[0].split('_')[-1])) 
     rounds = len(all_rounds_log_files) - 1
-    fig, axs = plt.subplots(t_row, t_col, figsize=(6,6))
+    fig, axs = plt.subplots(t_row, t_col, figsize=(12,5))
     cnt = 0
-    fc = {1:1, 3:2, 5:3, 7:4, 9:5, 10:6}
-    for id, value in fc.items():
+    for id in range(1, num_devices+1):
         global_trigger = []
         local_trigger_1 = []
         local_trigger_2 = []
@@ -190,7 +191,7 @@ def plot_asr_for_all_devices(time, num_devices, t_row, t_col):
             axs[row, col].plot(range(1, rounds+1), local_trigger_4, color='peachpuff', label='Local trigger 4')
             axs[row, col].plot(range(1, rounds+1), global_trigger, linewidth=1, color='black', label='Global trigger')
             axs[row, col].legend(fontsize=5)
-            axs[row, col].set_title(f"SL_node_{value}")
+            axs[row, col].set_title(f"device_{id}")
             axs[row, col].set_ylim([0,1.1])
             axs[row, col].set_xlabel("Communication Rounds")
             axs[row, col].set_ylabel("Attack Success Rate")
@@ -217,7 +218,9 @@ def plot_workers(time, adv_index, num_devices):
     log_folder = f"logs/{time}"
     all_rounds_log_files = sorted([f for f in listdir(log_folder) if f.startswith('comm')], key=lambda x: int(x.split('.')[0].split('_')[-1])) 
     rounds = len(all_rounds_log_files) - 1
+
     plt.clf()
+    fig = plt.figure(figsize=(4,3), dpi=300)
     plt.xlabel("Communication Rounds")
     plt.ylabel("Acc / ASR")
     acc = []
@@ -240,10 +243,10 @@ def plot_workers(time, adv_index, num_devices):
                         asr.append(float(lines_list[3+adv_index].split(': ')[-1]))
                         glo.append(float(lines_list[2].split(': ')[-1]))
                     break
-    plt.plot(range(1,rounds+1), acc, color=colors[1], label='Acc-workers')
-    #plt.plot(range(1,rounds+1), asr, marker="o",color=colors[3], label=f'ASR-trigger-{adv_index+1}')
-    plt.plot(range(1,rounds+1), glo, color=colors[2], label='ASR-workers')
+    plt.plot(range(1,rounds+1), acc, label='Acc-workers', linewidth=1.5)
+    plt.plot(range(1,rounds+1), glo, label='ASR-workers', linewidth=1.5)
     plt.legend()
+    plt.tight_layout()
     plt.savefig(f"{log_folder}/workers_trigger_{adv_index+1}.png", dpi=300)
     plt.show()
 
@@ -301,8 +304,9 @@ def plot_asr_for_single_trigger(time, adv_index, num_devices, t_row, t_col):
 def plot_acc_for_trails(name, log_dict, rounds, t_row, t_col, share=False):
     plt.clf()
     if not share:
-        fig, axs = plt.subplots(t_row, t_col, figsize=(14,6))
+        fig, axs = plt.subplots(t_row, t_col, figsize=(8,5))
     else:
+        fig = plt.figure(figsize=(4, 3), dpi=300)
         plt.xlabel('Communication Round')
         plt.ylabel('Accuracy')
     data = {}
@@ -337,7 +341,7 @@ def plot_acc_for_trails(name, log_dict, rounds, t_row, t_col, share=False):
                 axs[cnt].set_ylabel("Accuracy")
         
         else:
-            plt.plot(range(1, rounds+1), data[var],color=colors[color_index], label=var)
+            plt.plot(range(1, rounds+1), data[var], label=var, linewidth=2)
             plt.yticks([0,0.2,0.4,0.6,0.8,1.0])
             color_index += 1
             
@@ -352,7 +356,7 @@ def plot_acc_for_trails(name, log_dict, rounds, t_row, t_col, share=False):
 
 def plot_asr_for_trails(name, log_dict, rounds, t_row, t_col):
     plt.clf()
-    fig, axs = plt.subplots(t_row, t_col, figsize=(14,6))
+    fig, axs = plt.subplots(t_row, t_col, figsize=(9,2.5))
     data = {}
     cnt = 0
     for var, time in log_dict.items():
@@ -381,27 +385,27 @@ def plot_asr_for_trails(name, log_dict, rounds, t_row, t_col):
             if t_row > 1: # 2-dimentional
                 row = int(cnt/ t_col)
                 col = cnt % t_col
-                axs[row, col].plot(range(1, rounds+1), local_trigger_1, color='lightsteelblue', label='Local trigger 1')
-                axs[row, col].plot(range(1, rounds+1), local_trigger_2, color='cornflowerblue', label='Local trigger 2')
-                axs[row, col].plot(range(1, rounds+1), local_trigger_3, color='lightsalmon', label='Local trigger 3')
-                axs[row, col].plot(range(1, rounds+1), local_trigger_4, color='peachpuff', label='Local trigger 4')
-                axs[row, col].plot(range(1, rounds+1), global_trigger, linewidth=1, color='black', label='Global trigger')
+                axs[row, col].plot(range(1, rounds+1), local_trigger_1, color='lightsteelblue', label='Local trigger 1', linewidth=2)
+                axs[row, col].plot(range(1, rounds+1), local_trigger_2, color='cornflowerblue', label='Local trigger 2', linewidth=2)
+                axs[row, col].plot(range(1, rounds+1), local_trigger_3, color='lightsalmon', label='Local trigger 3', linewidth=2)
+                axs[row, col].plot(range(1, rounds+1), local_trigger_4, color='peachpuff', label='Local trigger 4', linewidth=2)
+                axs[row, col].plot(range(1, rounds+1), global_trigger, color='black', label='Global trigger', linewidth=1.5)
                 
                 axs[row, col].set_title(var)
                 axs[row, col].set_xlabel("Communication Rounds")
                 axs[row, col].set_ylabel("Attack Success Rate")
-                axs[row, col].legend(loc='lower right', fontsize=4)
+                axs[row, col].legend(loc='lower right', fontsize=10)
             else:
-                axs[cnt].plot(range(1, rounds+1), local_trigger_1, color='lightsteelblue', label='Local trigger 1')
-                axs[cnt].plot(range(1, rounds+1), local_trigger_2, color='cornflowerblue', label='Local trigger 2')
-                axs[cnt].plot(range(1, rounds+1), local_trigger_3, color='lightsalmon', label='Local trigger 3')
-                axs[cnt].plot(range(1, rounds+1), local_trigger_4, color='peachpuff', label='Local trigger 4')
-                axs[cnt].plot(range(1, rounds+1), global_trigger, linewidth=1, color='black', label='Global trigger')
+                axs[cnt].plot(range(1, rounds+1), local_trigger_1, color='lightsteelblue', label='Local trigger 1', linewidth=2)
+                axs[cnt].plot(range(1, rounds+1), local_trigger_2, color='cornflowerblue', label='Local trigger 2', linewidth=2)
+                axs[cnt].plot(range(1, rounds+1), local_trigger_3, color='lightsalmon', label='Local trigger 3', linewidth=2)
+                axs[cnt].plot(range(1, rounds+1), local_trigger_4, color='peachpuff', label='Local trigger 4', linewidth=2)
+                axs[cnt].plot(range(1, rounds+1), global_trigger, color='black', label='Global trigger', linewidth=1.5)
                 
                 axs[cnt].set_title(f"{var}")
                 axs[cnt].set_xlabel("Communication Rounds")
                 axs[cnt].set_ylabel("Attack Success Rate")
-                axs[cnt].legend(loc='lower right', fontsize=6)
+                axs[cnt].legend(loc='lower right', fontsize=8)
 
             cnt += 1
     
@@ -412,7 +416,8 @@ def plot_asr_for_trails(name, log_dict, rounds, t_row, t_col):
 
 def plot_acc_asr_for_trails(name, dict, round_1, round_2):
     plt.clf()
-    plt.xlabel('Communication Round')
+    fig = plt.figure(figsize=(4,3), dpi=300)
+    plt.xlabel('Malicious nodes')
     plt.ylabel('Acc / ASR')
     
     x = []
@@ -442,13 +447,14 @@ def plot_acc_asr_for_trails(name, dict, round_1, round_2):
             lines_list = file.read().split("\n")
             asr_2.append(float(lines_list[0].split(': ')[-1]))
     
-    plt.plot(x, acc_1, color='lightsteelblue', marker='s', label=f'Acc-{round_1}')
-    plt.plot(x, acc_2, color='cornflowerblue', marker='s', label='Acc')
-    plt.plot(x, asr_1, color='lightsalmon', marker='o', label=f'ASR-{round_1}')
-    plt.plot(x, asr_2, color='peachpuff', marker='o', label='ASR')
+    plt.plot(x, acc_1, marker='s', label=f'Acc-{round_1}', linewidth=2)
+    plt.plot(x, acc_2, marker='s', label='Acc', linewidth=2)
+    plt.plot(x, asr_1, marker='o', label=f'ASR-{round_1}', linewidth=2)
+    plt.plot(x, asr_2, marker='o', label='ASR', linewidth=2)
     plt.yticks([0,0.2,0.4,0.6,0.8,1.0])
 
     plt.legend(loc='best')
+    plt.tight_layout()
 
     plt.savefig(f"images/{name}.png", dpi=300)
     plt.show()
@@ -493,3 +499,53 @@ def plot_single_device_for_trails(name, dict, device_id, rounds, trigger_index):
 
     plt.savefig(f"images/{name}.png", dpi=300)
     plt.show()
+
+def plot_test(name, log_dict, rounds, t_row, t_col):
+    plt.clf()
+    fig, axs = plt.subplots(t_row, t_col, figsize=(8,5))
+    data = {}
+    cnt = 0
+    for var, time in log_dict.items():
+        log_folder = f"logs/{time}"
+        all_rounds_log_files = sorted([f for f in listdir(log_folder) if f.startswith('comm')], key=lambda x: int(x.split('.')[0].split('_')[-1]))
+        total_rounds = len(all_rounds_log_files) - 1
+        if total_rounds < rounds:
+            print(f"[Error] logs/{time} has saved only {total_rounds} rounds.\n")
+            return
+        else:
+            global_trigger = []
+            accu = []
+            for i in range(rounds):
+                with open(f"{log_folder}/comm_{i+1}/accuracy_comm_{i+1}.txt", 'r') as file:
+                    lines_list = file.read().split("\n")
+                    accu.append(float(lines_list[0].split(': ')[-1]))
+
+            for i in range(rounds):
+                with open(f"{log_folder}/comm_{i+1}/attack_comm_{i+1}.txt", 'r') as file:
+                    lines_list = file.read().split("\n")
+                    global_trigger.append(float(lines_list[0].split(': ')[-1]))
+
+            if t_row > 1: # 2-dimentional
+                row = int(cnt/ t_col)
+                col = cnt % t_col
+                axs[row, col].plot(range(1, rounds+1), global_trigger, label='ASR (Global trigger)', linewidth=2)
+                axs[row, col].plot(range(1, rounds+1), accu, label='Acc', linewidth=2)
+                
+                axs[row, col].set_title(var)
+                axs[row, col].set_xlabel("Communication Rounds")
+                axs[row, col].set_ylabel("Attack Success Rate")
+                axs[row, col].legend(loc='lower right', fontsize=10)
+            else:
+                axs[cnt].plot(range(1, rounds+1), global_trigger, linewidth=1, color='black', label='Global trigger')
+                
+                axs[cnt].set_title(f"{var}")
+                axs[cnt].set_xlabel("Communication Rounds")
+                axs[cnt].set_ylabel("Attack Success Rate")
+                axs[cnt].legend(loc='lower right', fontsize=10)
+
+            cnt += 1
+    
+    plt.tight_layout()
+    plt.savefig(f"images/{name}.png", dpi=300)
+    plt.show()
+    return
